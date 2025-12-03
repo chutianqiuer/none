@@ -1,3 +1,6 @@
 com/example/demo/HelloController.class
 com/example/demo/DemoApplication.class
+com/example/demo/CustomerController.class
+com/example/demo/CustomerRepository.class
+com/example/demo/Customer.class
 com/example/demo/Greeting.class
