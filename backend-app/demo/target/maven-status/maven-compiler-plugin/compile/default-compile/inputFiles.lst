@@ -5,8 +5,11 @@
 /workspaces/none/backend-app/demo/src/main/java/com/example/demo/Order.java
 /workspaces/none/backend-app/demo/src/main/java/com/example/demo/dto/OrderRequest.java
 /workspaces/none/backend-app/demo/src/main/java/com/example/demo/DemoApplication.java
+/workspaces/none/backend-app/demo/src/main/java/com/example/demo/OrderScheduler.java
+/workspaces/none/backend-app/demo/src/main/java/com/example/demo/ProductRepository.java
 /workspaces/none/backend-app/demo/src/main/java/com/example/demo/OrderService.java
 /workspaces/none/backend-app/demo/src/main/java/com/example/demo/OrderController.java
+/workspaces/none/backend-app/demo/src/main/java/com/example/demo/Product.java
 /workspaces/none/backend-app/demo/src/main/java/com/example/demo/Greeting.java
 /workspaces/none/backend-app/demo/src/main/java/com/example/demo/dto/OrderResponse.java
 /workspaces/none/backend-app/demo/src/main/java/com/example/demo/OrderStatus.java

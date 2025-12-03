@@ -4,69 +4,72 @@ import com.example.demo.dto.OrderRequest;
 import com.example.demo.dto.OrderResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
 
-    private final OrderRepository orderRepository;
-    private final CustomerRepository customerRepository;
+    private final OrderRepository orderRepo;
+    private final CustomerRepository customerRepo;
+    private final ProductRepository productRepo;
 
-    public OrderService(OrderRepository orderRepository, CustomerRepository customerRepository) {
-        this.orderRepository = orderRepository;
-        this.customerRepository = customerRepository;
+    public OrderService(OrderRepository orderRepo, CustomerRepository customerRepo, ProductRepository productRepo) {
+        this.orderRepo = orderRepo;
+        this.customerRepo = customerRepo;
+        this.productRepo = productRepo;
     }
 
-    // 下单业务：带有事务，要么全成，要么全败
     @Transactional
     public OrderResponse createOrder(OrderRequest request) {
-        // 1. 校验客户是否存在
-        Customer customer = customerRepository.findById(request.customerId())
-                .orElseThrow(() -> new CustomerNotFoundException(request.customerId()));
+        Customer customer = customerRepo.findById(request.customerId())
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
 
-        // 2. 创建订单实体
-        Order order = new Order(request.description(), request.amount(), customer);
+        Product product = productRepo.findById(request.productId())
+                .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        // 3. 保存
-        Order savedOrder = orderRepository.save(order);
+        // 1. 扣减库存 (如果库存不足会抛异常，如果并发冲突乐观锁会抛异常)
+        product.decreaseStock(request.quantity());
+        productRepo.save(product); 
 
-        // 4. 转换为 DTO 返回
+        // 2. 创建订单
+        Order order = new Order(customer, product, request.quantity());
+        Order savedOrder = orderRepo.save(order);
+
         return toResponse(savedOrder);
     }
 
-    // 支付业务
+    // 支付
     @Transactional
     public OrderResponse payOrder(Long orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
-
-        if (order.getStatus() == OrderStatus.PAID) {
-            throw new RuntimeException("Order already paid");
-        }
+        Order order = orderRepo.findById(orderId).orElseThrow();
+        if (order.getStatus() != OrderStatus.PENDING) throw new RuntimeException("Invalid order status");
 
         order.setStatus(OrderStatus.PAID);
-        // JPA 的脏检查机制会自动更新数据库，不需要显式调用 save
-
         return toResponse(order);
     }
 
-    public List<OrderResponse> findOrdersByCustomer(Long customerId) {
-        return orderRepository.findByCustomerId(customerId).stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+    // 取消订单 (并回滚库存)
+    @Transactional
+    public void cancelOrder(Order order) {
+        order.setStatus(OrderStatus.CANCELLED);
+        orderRepo.save(order);
+
+        // 恢复库存
+        Product product = order.getProduct();
+        product.increaseStock(order.getQuantity());
+        productRepo.save(product);
+
+        System.out.println("订单 " + order.getId() + " 已取消，库存已恢复。");
     }
 
-    // 辅助方法：Entity -> DTO
-    private OrderResponse toResponse(Order order) {
-        return new OrderResponse(
-            order.getId(),
-            order.getDescription(),
-            order.getAmount(),
-            order.getStatus(),
-            order.getCustomer().getFirstName() + " " + order.getCustomer().getLastName(),
-            order.getCreatedAt()
-        );
+    public List<OrderResponse> findOrdersByCustomer(Long customerId) {
+        return orderRepo.findByCustomerId(customerId).stream().map(this::toResponse).collect(Collectors.toList());
+    }
+
+    private OrderResponse toResponse(Order o) {
+        return new OrderResponse(o.getId(), o.getCustomer().getFirstName(), o.getProduct().getName(),
+                o.getQuantity(), o.getProduct().getPrice().multiply(java.math.BigDecimal.valueOf(o.getQuantity())),
+                o.getStatus(), o.getCreatedAt());
     }
 }
