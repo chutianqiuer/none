@@ -1,0 +1,1233 @@
+Directory structure:
+└── demo/
+    ├── 1.ipynb
+    ├── pom.xml
+    └── src/
+        └── main/
+            └── java/
+                └── com/
+                    └── example/
+                        └── demo/
+                            ├── Customer.java
+                            ├── CustomerController.java
+                            ├── CustomerNotFoundException.java
+                            ├── CustomerRepository.java
+                            ├── CustomerService.java
+                            ├── DemoApplication.java
+                            ├── GlobalExceptionHandler.java
+                            ├── Greeting.java
+                            └── HelloController.java
+
+================================================
+FILE: 1.ipynb
+================================================
+# Jupyter notebook converted to Python script.
+
+"""
+# A
+"""
+
+"""
+## 1 Customer
+"""
+
+import os
+
+# 定义项目的基础包路径
+base_package_path = os.path.join("src", "main", "java", "com", "example", "demo")
+
+# 确保目录存在
+os.makedirs(base_package_path, exist_ok=True)
+
+# 1. pom.xml - 添加了 Spring Data JPA 和 H2 数据库依赖
+pom_content = """<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.2.0</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.example</groupId>
+    <artifactId>demo</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>demo</name>
+    <description>Demo project for Spring Boot</description>
+
+    <properties>
+        <java.version>17</java.version>
+    </properties>
+
+    <dependencies>
+        <!-- Web 模块：包含 REST API 支持 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- JPA：用于数据库操作 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- H2：内存数据库 -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- 测试模块 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+"""
+
+# 2. Customer.java - 数据库实体类
+customer_entity_content = """package com.example.demo;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+
+@Entity
+public class Customer {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
+    private String firstName;
+    private String lastName;
+
+    protected Customer() {}
+
+    public Customer(String firstName, String lastName) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+}
+"""
+
+# 3. CustomerRepository.java - 数据访问接口
+customer_repo_content = """package com.example.demo;
+
+import org.springframework.data.repository.CrudRepository;
+
+// 只需要继承 CrudRepository，Spring 会自动实现 CRUD 方法
+public interface CustomerRepository extends CrudRepository<Customer, Long> {
+    // 可以在这里定义自定义查询，例如：
+    // List<Customer> findByLastName(String lastName);
+}
+"""
+
+# 4. CustomerController.java - REST 控制器 (暴露给浏览器)
+customer_controller_content = """package com.example.demo;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/customers")
+public class CustomerController {
+
+    private final CustomerRepository repository;
+
+    public CustomerController(CustomerRepository repository) {
+        this.repository = repository;
+    }
+
+    // GET /customers -> 返回所有用户
+    @GetMapping
+    public Iterable<Customer> findAll() {
+        return repository.findAll();
+    }
+    
+    // POST /customers -> 添加一个新用户 (接收 JSON)
+    @PostMapping
+    public Customer addCustomer(@RequestBody Customer customer) {
+        return repository.save(customer);
+    }
+}
+"""
+
+# 5. DemoApplication.java - 主程序 (启动时初始化数据)
+app_content = """package com.example.demo;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+
+@SpringBootApplication
+public class DemoApplication {
+
+    private static final Logger log = LoggerFactory.getLogger(DemoApplication.class);
+
+    public static void main(String[] args) {
+        SpringApplication.run(DemoApplication.class, args);
+    }
+
+    @Bean
+    public CommandLineRunner demo(CustomerRepository repository) {
+        return (args) -> {
+            // 启动时自动保存几个用户到 H2 内存数据库
+            repository.save(new Customer("Jack", "Bauer"));
+            repository.save(new Customer("Chloe", "O'Brian"));
+            repository.save(new Customer("Kim", "Bauer"));
+            repository.save(new Customer("David", "Palmer"));
+            repository.save(new Customer("Michelle", "Dessler"));
+
+            log.info("--- 演示数据已初始化 ---");
+        };
+    }
+}
+"""
+
+# 写入文件的辅助函数
+def write_file(path, content):
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+    print(f"已更新/创建: {path}")
+
+# 执行写入
+write_file("pom.xml", pom_content)
+write_file(os.path.join(base_package_path, "Customer.java"), customer_entity_content)
+write_file(os.path.join(base_package_path, "CustomerRepository.java"), customer_repo_content)
+write_file(os.path.join(base_package_path, "CustomerController.java"), customer_controller_content)
+write_file(os.path.join(base_package_path, "DemoApplication.java"), app_content)
+
+print("-" * 30)
+print("所有文件已生成！请运行 'mvn spring-boot:run' 启动项目。")
+
+# Output:
+#   已更新/创建: pom.xml
+
+#   已更新/创建: src/main/java/com/example/demo/Customer.java
+
+#   已更新/创建: src/main/java/com/example/demo/CustomerRepository.java
+
+#   已更新/创建: src/main/java/com/example/demo/CustomerController.java
+
+#   已更新/创建: src/main/java/com/example/demo/DemoApplication.java
+
+#   ------------------------------
+
+#   所有文件已生成！请运行 'mvn spring-boot:run' 启动项目。
+
+
+"""
+## 2 Customer
+"""
+
+import os
+
+# 定义项目路径
+base_package_path = os.path.join("src", "main", "java", "com", "example", "demo")
+os.makedirs(base_package_path, exist_ok=True)
+
+# 1. POM.XML - 增加 Validation 依赖
+pom_content = """<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.2.0</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.example</groupId>
+    <artifactId>demo</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>demo</name>
+    <description>Demo project for Spring Boot</description>
+
+    <properties>
+        <java.version>17</java.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- 新增：数据校验框架 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+"""
+
+# 2. Customer.java - 增加 @NotBlank 等校验注解
+customer_entity_content = """package com.example.demo;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+@Entity
+public class Customer {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
+
+    @NotBlank(message = "First name cannot be empty")
+    @Size(min = 2, message = "First name must be at least 2 characters")
+    private String firstName;
+
+    @NotBlank(message = "Last name cannot be empty")
+    private String lastName;
+
+    protected Customer() {}
+
+    public Customer(String firstName, String lastName) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+    }
+
+    public Long getId() { return id; }
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+}
+"""
+
+# 3. CustomerRepository.java - 增加自定义查询方法
+customer_repo_content = """package com.example.demo;
+
+import org.springframework.data.repository.CrudRepository;
+import java.util.List;
+
+public interface CustomerRepository extends CrudRepository<Customer, Long> {
+    // Spring Data JPA 会自动根据方法名生成 SQL
+    List<Customer> findByLastName(String lastName);
+}
+"""
+
+# 4. CustomerService.java - (新) 业务逻辑层
+customer_service_content = """package com.example.demo;
+
+import org.springframework.stereotype.Service;
+import java.util.List;
+
+@Service
+public class CustomerService {
+
+    private final CustomerRepository repository;
+
+    public CustomerService(CustomerRepository repository) {
+        this.repository = repository;
+    }
+
+    public Iterable<Customer> findAll() {
+        return repository.findAll();
+    }
+
+    public List<Customer> findByLastName(String lastName) {
+        return repository.findByLastName(lastName);
+    }
+
+    public Customer save(Customer customer) {
+        return repository.save(customer);
+    }
+
+    public Customer findById(Long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new CustomerNotFoundException(id));
+    }
+    
+    public void deleteById(Long id) {
+        if (!repository.existsById(id)) {
+            throw new CustomerNotFoundException(id);
+        }
+        repository.deleteById(id);
+    }
+}
+"""
+
+# 5. CustomerNotFoundException.java - (新) 自定义异常
+exception_class_content = """package com.example.demo;
+
+public class CustomerNotFoundException extends RuntimeException {
+    public CustomerNotFoundException(Long id) {
+        super("Could not find customer " + id);
+    }
+}
+"""
+
+# 6. GlobalExceptionHandler.java - (新) 全局异常处理器
+handler_content = """package com.example.demo;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+    // 处理找不到用户的异常 -> 返回 404
+    @ResponseBody
+    @ExceptionHandler(CustomerNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Map<String, String> customerNotFoundHandler(CustomerNotFoundException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", ex.getMessage());
+        return error;
+    }
+
+    // 处理校验失败（比如名字为空）的异常 -> 返回 400
+    @ResponseBody
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getFieldErrors().forEach(error -> 
+            errors.put(error.getField(), error.getDefaultMessage()));
+        return errors;
+    }
+}
+"""
+
+# 7. CustomerController.java - 更新为使用 Service 和 校验
+controller_content = """package com.example.demo;
+
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+
+@RestController
+@RequestMapping("/customers")
+public class CustomerController {
+
+    private final CustomerService service;
+
+    public CustomerController(CustomerService service) {
+        this.service = service;
+    }
+
+    @GetMapping
+    public Iterable<Customer> findAll() {
+        return service.findAll();
+    }
+    
+    // 新增：根据 ID 查询
+    @GetMapping("/{id}")
+    public Customer findOne(@PathVariable Long id) {
+        return service.findById(id);
+    }
+
+    // 新增：根据姓氏查询 (例如 /customers/search?lastName=Bauer)
+    @GetMapping("/search")
+    public List<Customer> search(@RequestParam String lastName) {
+        return service.findByLastName(lastName);
+    }
+
+    // 更新：添加了 @Valid 进行数据校验
+    @PostMapping
+    public Customer addCustomer(@Valid @RequestBody Customer customer) {
+        return service.save(customer);
+    }
+    
+    // 新增：删除用户
+    @DeleteMapping("/{id}")
+    public void deleteCustomer(@PathVariable Long id) {
+        service.deleteById(id);
+    }
+}
+"""
+
+# 8. DemoApplication.java (保持数据初始化不变)
+app_content = """package com.example.demo;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+
+@SpringBootApplication
+public class DemoApplication {
+
+    private static final Logger log = LoggerFactory.getLogger(DemoApplication.class);
+
+    public static void main(String[] args) {
+        SpringApplication.run(DemoApplication.class, args);
+    }
+
+    @Bean
+    public CommandLineRunner demo(CustomerRepository repository) {
+        return (args) -> {
+            repository.save(new Customer("Jack", "Bauer"));
+            repository.save(new Customer("Chloe", "O'Brian"));
+            repository.save(new Customer("Kim", "Bauer"));
+            log.info("--- 初始化数据完成 ---");
+        };
+    }
+}
+"""
+
+def write_file(path, content):
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+    print(f"已更新: {path}")
+
+# 执行写入
+write_file("pom.xml", pom_content)
+write_file(os.path.join(base_package_path, "Customer.java"), customer_entity_content)
+write_file(os.path.join(base_package_path, "CustomerRepository.java"), customer_repo_content)
+write_file(os.path.join(base_package_path, "CustomerService.java"), customer_service_content)
+write_file(os.path.join(base_package_path, "CustomerNotFoundException.java"), exception_class_content)
+write_file(os.path.join(base_package_path, "GlobalExceptionHandler.java"), handler_content)
+write_file(os.path.join(base_package_path, "CustomerController.java"), controller_content)
+write_file(os.path.join(base_package_path, "DemoApplication.java"), app_content)
+
+print("-" * 30)
+print("深度升级完成！请运行 'mvn spring-boot:run'")
+
+# Output:
+#   已更新: pom.xml
+
+#   已更新: src/main/java/com/example/demo/Customer.java
+
+#   已更新: src/main/java/com/example/demo/CustomerRepository.java
+
+#   已更新: src/main/java/com/example/demo/CustomerService.java
+
+#   已更新: src/main/java/com/example/demo/CustomerNotFoundException.java
+
+#   已更新: src/main/java/com/example/demo/GlobalExceptionHandler.java
+
+#   已更新: src/main/java/com/example/demo/CustomerController.java
+
+#   已更新: src/main/java/com/example/demo/DemoApplication.java
+
+#   ------------------------------
+
+#   深度升级完成！请运行 'mvn spring-boot:run'
+
+
+"""
+# 3 电商订单系统 Order 
+"""
+
+import os
+
+# 基础路径
+base_path = os.path.join("src", "main", "java", "com", "example", "demo")
+dto_path = os.path.join(base_path, "dto")
+os.makedirs(dto_path, exist_ok=True)
+
+# 1. 定义枚举 OrderStatus (订单状态)
+order_status_content = """package com.example.demo;
+
+public enum OrderStatus {
+    PENDING,   // 待支付
+    PAID,      // 已支付
+    CANCELLED  // 已取消
+}
+"""
+
+# 2. 更新 Customer.java (不做双向关联以简化 JSON，但在业务上是 1对多)
+customer_content = """package com.example.demo;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+
+@Entity
+@Table(name = "customers")
+public class Customer {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotBlank
+    private String firstName;
+    
+    @NotBlank
+    private String lastName;
+
+    protected Customer() {}
+
+    public Customer(String firstName, String lastName) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+    }
+
+    public Long getId() { return id; }
+    public String getFirstName() { return firstName; }
+    public String getLastName() { return lastName; }
+}
+"""
+
+# 3. 创建 Order.java (订单实体 - 多对一关联 Customer)
+order_content = """package com.example.demo;
+
+import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "orders")
+public class Order {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String description;
+    private BigDecimal amount;
+    
+    private LocalDateTime createdAt;
+
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status;
+
+    // 核心：多对一关联
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
+    private Customer customer;
+
+    protected Order() {}
+
+    public Order(String description, BigDecimal amount, Customer customer) {
+        this.description = description;
+        this.amount = amount;
+        this.customer = customer;
+        this.status = OrderStatus.PENDING; // 默认状态
+        this.createdAt = LocalDateTime.now();
+    }
+
+    // Getters and Setters
+    public Long getId() { return id; }
+    public String getDescription() { return description; }
+    public BigDecimal getAmount() { return amount; }
+    public OrderStatus getStatus() { return status; }
+    public void setStatus(OrderStatus status) { this.status = status; }
+    public Customer getCustomer() { return customer; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+}
+"""
+
+# 4. 创建 DTO (数据传输对象) - 位于 dto 包
+# OrderRequest: 前端发来的下单请求
+dto_request_content = """package com.example.demo.dto;
+
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import java.math.BigDecimal;
+
+public record OrderRequest(
+    @NotNull Long customerId,
+    String description,
+    @Positive(message = "Amount must be greater than 0") BigDecimal amount
+) {}
+"""
+
+# OrderResponse: 返回给前端的数据 (隐藏数据库实体细节)
+dto_response_content = """package com.example.demo.dto;
+
+import com.example.demo.OrderStatus;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+public record OrderResponse(
+    Long orderId,
+    String description,
+    BigDecimal amount,
+    OrderStatus status,
+    String customerName,
+    LocalDateTime createdAt
+) {}
+"""
+
+# 5. OrderRepository
+order_repo_content = """package com.example.demo;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
+
+public interface OrderRepository extends JpaRepository<Order, Long> {
+    List<Order> findByCustomerId(Long customerId);
+}
+"""
+
+# 6. OrderService (核心业务逻辑 + 事务 + DTO转换)
+order_service_content = """package com.example.demo;
+
+import com.example.demo.dto.OrderRequest;
+import com.example.demo.dto.OrderResponse;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class OrderService {
+
+    private final OrderRepository orderRepository;
+    private final CustomerRepository customerRepository;
+
+    public OrderService(OrderRepository orderRepository, CustomerRepository customerRepository) {
+        this.orderRepository = orderRepository;
+        this.customerRepository = customerRepository;
+    }
+
+    // 下单业务：带有事务，要么全成，要么全败
+    @Transactional
+    public OrderResponse createOrder(OrderRequest request) {
+        // 1. 校验客户是否存在
+        Customer customer = customerRepository.findById(request.customerId())
+                .orElseThrow(() -> new CustomerNotFoundException(request.customerId()));
+
+        // 2. 创建订单实体
+        Order order = new Order(request.description(), request.amount(), customer);
+        
+        // 3. 保存
+        Order savedOrder = orderRepository.save(order);
+
+        // 4. 转换为 DTO 返回
+        return toResponse(savedOrder);
+    }
+
+    // 支付业务
+    @Transactional
+    public OrderResponse payOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+        
+        if (order.getStatus() == OrderStatus.PAID) {
+            throw new RuntimeException("Order already paid");
+        }
+
+        order.setStatus(OrderStatus.PAID);
+        // JPA 的脏检查机制会自动更新数据库，不需要显式调用 save
+        
+        return toResponse(order);
+    }
+
+    public List<OrderResponse> findOrdersByCustomer(Long customerId) {
+        return orderRepository.findByCustomerId(customerId).stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    // 辅助方法：Entity -> DTO
+    private OrderResponse toResponse(Order order) {
+        return new OrderResponse(
+            order.getId(),
+            order.getDescription(),
+            order.getAmount(),
+            order.getStatus(),
+            order.getCustomer().getFirstName() + " " + order.getCustomer().getLastName(),
+            order.getCreatedAt()
+        );
+    }
+}
+"""
+
+# 7. OrderController (REST API)
+order_controller_content = """package com.example.demo;
+
+import com.example.demo.dto.OrderRequest;
+import com.example.demo.dto.OrderResponse;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/orders")
+public class OrderController {
+
+    private final OrderService orderService;
+
+    public OrderController(OrderService orderService) {
+        this.orderService = orderService;
+    }
+
+    // 下单接口
+    @PostMapping
+    public OrderResponse placeOrder(@Valid @RequestBody OrderRequest request) {
+        return orderService.createOrder(request);
+    }
+
+    // 支付接口
+    @PostMapping("/{id}/pay")
+    public OrderResponse payOrder(@PathVariable Long id) {
+        return orderService.payOrder(id);
+    }
+
+    // 查询某客户的所有订单
+    @GetMapping("/customer/{customerId}")
+    public List<OrderResponse> getCustomerOrders(@PathVariable Long customerId) {
+        return orderService.findOrdersByCustomer(customerId);
+    }
+}
+"""
+
+# 8. 更新 DemoApplication (初始化数据)
+app_content = """package com.example.demo;
+
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+
+@SpringBootApplication
+public class DemoApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(DemoApplication.class, args);
+    }
+
+    @Bean
+    public CommandLineRunner demo(CustomerRepository customerRepo) {
+        return (args) -> {
+            // 初始化两个客户
+            customerRepo.save(new Customer("Jack", "Ma"));
+            customerRepo.save(new Customer("Elon", "Musk"));
+            System.out.println("--- 基础客户数据已初始化 (ID 1 & 2) ---");
+        };
+    }
+}
+"""
+
+def write_file(path, content):
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+    print(f"Updated: {path}")
+
+# 执行写入
+write_file(os.path.join(base_path, "OrderStatus.java"), order_status_content)
+write_file(os.path.join(base_path, "Customer.java"), customer_content)
+write_file(os.path.join(base_path, "Order.java"), order_content)
+write_file(os.path.join(dto_path, "OrderRequest.java"), dto_request_content)
+write_file(os.path.join(dto_path, "OrderResponse.java"), dto_response_content)
+write_file(os.path.join(base_path, "OrderRepository.java"), order_repo_content)
+write_file(os.path.join(base_path, "OrderService.java"), order_service_content)
+write_file(os.path.join(base_path, "OrderController.java"), order_controller_content)
+write_file(os.path.join(base_path, "DemoApplication.java"), app_content)
+
+print("-" * 40)
+print("业务场景升级完毕！包含：实体关联、事务、DTO、状态流转。")
+
+
+
+
+================================================
+FILE: pom.xml
+================================================
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.2.0</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.example</groupId>
+    <artifactId>demo</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>demo</name>
+    <description>Demo project for Spring Boot</description>
+
+    <properties>
+        <java.version>17</java.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- 新增：数据校验框架 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+
+
+
+================================================
+FILE: src/main/java/com/example/demo/Customer.java
+================================================
+package com.example.demo;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+@Entity
+public class Customer {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
+
+    @NotBlank(message = "First name cannot be empty")
+    @Size(min = 2, message = "First name must be at least 2 characters")
+    private String firstName;
+
+    @NotBlank(message = "Last name cannot be empty")
+    private String lastName;
+
+    protected Customer() {}
+
+    public Customer(String firstName, String lastName) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+    }
+
+    public Long getId() { return id; }
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+}
+
+
+
+================================================
+FILE: src/main/java/com/example/demo/CustomerController.java
+================================================
+package com.example.demo;
+
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+
+@RestController
+@RequestMapping("/customers")
+public class CustomerController {
+
+    private final CustomerService service;
+
+    public CustomerController(CustomerService service) {
+        this.service = service;
+    }
+
+    @GetMapping
+    public Iterable<Customer> findAll() {
+        return service.findAll();
+    }
+
+    // 新增：根据 ID 查询
+    @GetMapping("/{id}")
+    public Customer findOne(@PathVariable Long id) {
+        return service.findById(id);
+    }
+
+    // 新增：根据姓氏查询 (例如 /customers/search?lastName=Bauer)
+    @GetMapping("/search")
+    public List<Customer> search(@RequestParam String lastName) {
+        return service.findByLastName(lastName);
+    }
+
+    // 更新：添加了 @Valid 进行数据校验
+    @PostMapping
+    public Customer addCustomer(@Valid @RequestBody Customer customer) {
+        return service.save(customer);
+    }
+
+    // 新增：删除用户
+    @DeleteMapping("/{id}")
+    public void deleteCustomer(@PathVariable Long id) {
+        service.deleteById(id);
+    }
+}
+
+
+
+================================================
+FILE: src/main/java/com/example/demo/CustomerNotFoundException.java
+================================================
+package com.example.demo;
+
+public class CustomerNotFoundException extends RuntimeException {
+    public CustomerNotFoundException(Long id) {
+        super("Could not find customer " + id);
+    }
+}
+
+
+
+================================================
+FILE: src/main/java/com/example/demo/CustomerRepository.java
+================================================
+package com.example.demo;
+
+import org.springframework.data.repository.CrudRepository;
+import java.util.List;
+
+public interface CustomerRepository extends CrudRepository<Customer, Long> {
+    // Spring Data JPA 会自动根据方法名生成 SQL
+    List<Customer> findByLastName(String lastName);
+}
+
+
+
+================================================
+FILE: src/main/java/com/example/demo/CustomerService.java
+================================================
+package com.example.demo;
+
+import org.springframework.stereotype.Service;
+import java.util.List;
+
+@Service
+public class CustomerService {
+
+    private final CustomerRepository repository;
+
+    public CustomerService(CustomerRepository repository) {
+        this.repository = repository;
+    }
+
+    public Iterable<Customer> findAll() {
+        return repository.findAll();
+    }
+
+    public List<Customer> findByLastName(String lastName) {
+        return repository.findByLastName(lastName);
+    }
+
+    public Customer save(Customer customer) {
+        return repository.save(customer);
+    }
+
+    public Customer findById(Long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new CustomerNotFoundException(id));
+    }
+
+    public void deleteById(Long id) {
+        if (!repository.existsById(id)) {
+            throw new CustomerNotFoundException(id);
+        }
+        repository.deleteById(id);
+    }
+}
+
+
+
+================================================
+FILE: src/main/java/com/example/demo/DemoApplication.java
+================================================
+package com.example.demo;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+
+@SpringBootApplication
+public class DemoApplication {
+
+    private static final Logger log = LoggerFactory.getLogger(DemoApplication.class);
+
+    public static void main(String[] args) {
+        SpringApplication.run(DemoApplication.class, args);
+    }
+
+    @Bean
+    public CommandLineRunner demo(CustomerRepository repository) {
+        return (args) -> {
+            repository.save(new Customer("Jack", "Bauer"));
+            repository.save(new Customer("Chloe", "O'Brian"));
+            repository.save(new Customer("Kim", "Bauer"));
+            log.info("--- 初始化数据完成 ---");
+        };
+    }
+}
+
+
+
+================================================
+FILE: src/main/java/com/example/demo/GlobalExceptionHandler.java
+================================================
+package com.example.demo;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+    // 处理找不到用户的异常 -> 返回 404
+    @ResponseBody
+    @ExceptionHandler(CustomerNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Map<String, String> customerNotFoundHandler(CustomerNotFoundException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", ex.getMessage());
+        return error;
+    }
+
+    // 处理校验失败（比如名字为空）的异常 -> 返回 400
+    @ResponseBody
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getFieldErrors().forEach(error -> 
+            errors.put(error.getField(), error.getDefaultMessage()));
+        return errors;
+    }
+}
+
+
+
+================================================
+FILE: src/main/java/com/example/demo/Greeting.java
+================================================
+package com.example.demo;
+
+// 使用 record 定义一个简单的数据载体
+public record Greeting(long id, String content) { }
+
+
+
+================================================
+FILE: src/main/java/com/example/demo/HelloController.java
+================================================
+package com.example.demo;
+
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class HelloController {
+
+    private static final String template = "Hello, %s!";
+    // 用于生成唯一的 ID
+    private final AtomicLong counter = new AtomicLong();
+
+    @GetMapping("/greeting")
+    public Greeting greeting(@RequestParam(value = "name", defaultValue = "World") String name) {
+        // Spring Boot 会自动将这个 Greeting 对象转换为 JSON
+        return new Greeting(
+            counter.incrementAndGet(), 
+            String.format(template, name)
+        );
+    }
+}
+
+

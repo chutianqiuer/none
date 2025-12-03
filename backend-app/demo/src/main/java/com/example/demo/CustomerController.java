@@ -1,30 +1,45 @@
 package com.example.demo;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/customers")
 public class CustomerController {
 
-    private final CustomerRepository repository;
+    private final CustomerService service;
 
-    public CustomerController(CustomerRepository repository) {
-        this.repository = repository;
+    public CustomerController(CustomerService service) {
+        this.service = service;
     }
 
-    // GET /customers -> 返回所有用户
     @GetMapping
     public Iterable<Customer> findAll() {
-        return repository.findAll();
+        return service.findAll();
     }
 
-    // POST /customers -> 添加一个新用户 (接收 JSON)
+    // 新增：根据 ID 查询
+    @GetMapping("/{id}")
+    public Customer findOne(@PathVariable Long id) {
+        return service.findById(id);
+    }
+
+    // 新增：根据姓氏查询 (例如 /customers/search?lastName=Bauer)
+    @GetMapping("/search")
+    public List<Customer> search(@RequestParam String lastName) {
+        return service.findByLastName(lastName);
+    }
+
+    // 更新：添加了 @Valid 进行数据校验
     @PostMapping
-    public Customer addCustomer(@RequestBody Customer customer) {
-        return repository.save(customer);
+    public Customer addCustomer(@Valid @RequestBody Customer customer) {
+        return service.save(customer);
+    }
+
+    // 新增：删除用户
+    @DeleteMapping("/{id}")
+    public void deleteCustomer(@PathVariable Long id) {
+        service.deleteById(id);
     }
 }
