@@ -1,6 +1,7 @@
 /workspaces/none/backend-app/demo/src/main/java/com/example/demo/HelloController.java
 /workspaces/none/backend-app/demo/src/main/java/com/example/demo/CustomerController.java
 /workspaces/none/backend-app/demo/src/main/java/com/example/demo/CustomerNotFoundException.java
+/workspaces/none/backend-app/demo/src/main/java/com/example/demo/SwaggerConfig.java
 /workspaces/none/backend-app/demo/src/main/java/com/example/demo/OrderRepository.java
 /workspaces/none/backend-app/demo/src/main/java/com/example/demo/Order.java
 /workspaces/none/backend-app/demo/src/main/java/com/example/demo/dto/OrderRequest.java
